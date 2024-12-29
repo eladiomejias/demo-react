@@ -14,6 +14,7 @@ import Brightness4Icon from '@mui/icons-material/Brightness4';
 import Brightness7Icon from '@mui/icons-material/Brightness7';
 import { createTheme, ThemeProvider } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
+import { CircularProgress, Backdrop } from '@mui/material';
 
 function encryptText(text, secretKey) {
   return CryptoJS.AES.encrypt(text, secretKey).toString();
@@ -32,6 +33,7 @@ function App() {
   const [openDecryptDialog, setOpenDecryptDialog] = useState(false);
   const [selectedNote, setSelectedNote] = useState(null);
   const [decryptAction, setDecryptAction] = useState(null);
+  const [isLoading, setIsLoading] = useState(false);
 
   const theme = createTheme({
     palette: {
@@ -43,33 +45,63 @@ function App() {
   });
 
   useEffect(() => {
-    const savedNotes = JSON.parse(localStorage.getItem('notes')) || [];
-    setNotes(savedNotes);
+    const loadNotes = async () => {
+      setIsLoading(true);
+      const savedNotes = JSON.parse(localStorage.getItem('notes')) || [];
+      // Simulate a network delay
+      await new Promise((resolve) => setTimeout(resolve, 500));
+      setNotes(savedNotes);
+      setIsLoading(false);
+    };
+
+    loadNotes();
   }, []);
 
   useEffect(() => {
     localStorage.setItem('notes', JSON.stringify(notes));
   }, [notes]);
 
-  const handleSave = (title, content, secret) => {
+  const handleSave = async (title, content, secret) => {
+    setIsLoading(true);
+    const now = new Date();
     const encryptedContent = encryptText(content, secret);
     const id = editNote ? editNote.id : crypto.randomUUID();
-    const newNote = { id, title, content: encryptedContent, decryptedContent: '' };
+    const newNote = {
+      id,
+      title,
+      content: encryptedContent,
+      decryptedContent: '',
+      createdAt: editNote ? editNote.createdAt : now,
+      updatedAt: now,
+    };
     const updatedNotes = editNote
-      ? notes.map(note => (note.id === id ? newNote : note))
+      ? notes.map((note) => (note.id === id ? newNote : note))
       : [...notes, newNote];
+
+    // Simulate a network delay
+    await new Promise((resolve) => setTimeout(resolve, 500));
+
     setNotes(updatedNotes);
     setOpenDialog(false);
     setEditNote(null);
+    setIsLoading(false);
   };
 
-  const handleDecrypt = (note, secret) => {
+  const handleDecrypt = async (note, secret) => {
+    setIsLoading(true);
     try {
       const decryptedContent = decryptText(note.content, secret);
-      setNotes(notes.map(n => n.id === note.id ? { ...n, decryptedContent } : n));
+      setNotes(
+        notes.map((n) =>
+          n.id === note.id ? { ...n, decryptedContent, updatedAt: new Date() } : n
+        )
+      );
     } catch (error) {
       alert('Llave secreta incorrecta');
     }
+    // Simulate a network delay
+    await new Promise((resolve) => setTimeout(resolve, 500));
+    setIsLoading(false);
   };
 
   const handleEdit = (note) => {
@@ -78,9 +110,15 @@ function App() {
     setOpenDecryptDialog(true);
   };
 
-  const handleDelete = (id) => {
-    const updatedNotes = notes.filter(note => note.id !== id);
+  const handleDelete = async (id) => {
+    setIsLoading(true);
+    const updatedNotes = notes.filter((note) => note.id !== id);
+
+    // Simulate a network delay
+    await new Promise((resolve) => setTimeout(resolve, 500));
+
     setNotes(updatedNotes);
+    setIsLoading(false);
   };
 
   const handleDecryptDialogClose = () => {
@@ -107,15 +145,28 @@ function App() {
       <CssBaseline />
       <AppBar position="static">
         <Toolbar>
-          <Typography variant="h6" style={{ flexGrow: 1 }}>Noties</Typography>
+          <Typography variant="h6" style={{ flexGrow: 1 }}>
+            Noties
+          </Typography>
           <IconButton color="inherit" onClick={() => setDarkMode(!darkMode)}>
             {darkMode ? <Brightness7Icon /> : <Brightness4Icon />}
           </IconButton>
         </Toolbar>
       </AppBar>
       <Container>
-        <NoteList notes={notes} onDecrypt={handleDecrypt} onEdit={handleEdit} onDelete={handleDelete} />
-        <Fab color="primary" aria-label="add" onClick={() => setOpenDialog(true)} style={{ position: 'fixed', bottom: '2rem', right: '2rem' }}>
+        <NoteList
+          notes={notes}
+          onDecrypt={handleDecrypt}
+          onEdit={handleEdit}
+          onDelete={handleDelete}
+          isLoading={isLoading}
+        />
+        <Fab
+          color="primary"
+          aria-label="add"
+          onClick={() => setOpenDialog(true)}
+          style={{ position: 'fixed', bottom: '2rem', right: '2rem' }}
+        >
           <AddIcon />
         </Fab>
         <NoteDialog
@@ -129,6 +180,12 @@ function App() {
           onClose={handleDecryptDialogClose}
           onDecrypt={handleDecryptDialogSubmit}
         />
+        <Backdrop
+          sx={{ color: '#fff', zIndex: (theme) => theme.zIndex.drawer + 1 }}
+          open={isLoading}
+        >
+          <CircularProgress color="inherit" />
+        </Backdrop>
       </Container>
     </ThemeProvider>
   );

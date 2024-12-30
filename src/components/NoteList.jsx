@@ -75,6 +75,14 @@ function NoteList({ notes, onDecrypt, onEdit, onDelete, isLoading }) {
     }).format(date);
   };
 
+  if (notes.length === 0) {
+    return (
+      <Typography variant="h6" align="center" sx={{ mt: 4 }}>
+        No hay notas, empiece creando una.
+      </Typography>
+    );
+  }
+
   return (
     <Grid container spacing={2}>
       {notes.map((note, index) => (

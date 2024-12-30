@@ -18,6 +18,7 @@ import { CircularProgress, Backdrop } from '@mui/material';
 import TextField from '@mui/material/TextField';
 import InputAdornment from '@mui/material/InputAdornment';
 import SearchIcon from '@mui/icons-material/Search';
+import ErrorBoundary from './components/ErrorBoundary';
 
 function encryptText(text, secretKey) {
   return CryptoJS.AES.encrypt(text, secretKey).toString();
@@ -38,6 +39,7 @@ function App() {
   const [decryptAction, setDecryptAction] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [isInitialized, setIsInitialized] = useState(false);
 
   const theme = createTheme({
     palette: {
@@ -60,14 +62,19 @@ function App() {
       await new Promise((resolve) => setTimeout(resolve, 500));
       setNotes(notesWithHiddenContent);
       setIsLoading(false);
+      setIsInitialized(true);
     };
 
-    loadNotes();
-  }, []);
+    if (!isInitialized) {
+      loadNotes();
+    }
+  }, [isInitialized]);
 
   useEffect(() => {
-    localStorage.setItem('notes', JSON.stringify(notes));
-  }, [notes]);
+    if (isInitialized) {
+      localStorage.setItem('notes', JSON.stringify(notes));
+    }
+  }, [notes, isInitialized]);
 
   const handleSave = async (title, content, secret, tags, importance) => {
     setIsLoading(true);
@@ -107,6 +114,7 @@ function App() {
         )
       );
     } catch (error) {
+      console.error('Decryption error:', error);
       alert('Llave secreta incorrecta');
     }
     // Simulate a network delay
@@ -144,6 +152,7 @@ function App() {
         setEditNote({ ...selectedNote, decryptedContent });
         setOpenDialog(true);
       } catch (error) {
+        console.error('Decryption error:', error);
         alert('Llave secreta incorrecta');
       }
     }
@@ -159,68 +168,70 @@ function App() {
   });
 
   return (
-    <ThemeProvider theme={theme}>
-      <CssBaseline />
-      <AppBar position="static">
-        <Toolbar>
-          <Typography variant="h6" style={{ flexGrow: 1 }}>
-            Noties
-          </Typography>
-          <IconButton color="inherit" onClick={() => setDarkMode(!darkMode)}>
-            {darkMode ? <Brightness7Icon /> : <Brightness4Icon />}
-          </IconButton>
-        </Toolbar>
-      </AppBar>
-      <Container>
-        <TextField
-          fullWidth
-          variant="outlined"
-          margin="normal"
-          placeholder="Buscar notas por título o tag..."
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          InputProps={{
-            startAdornment: (
-              <InputAdornment position="start">
-                <SearchIcon />
-              </InputAdornment>
-            ),
-          }}
-        />
-        <NoteList
-          notes={filteredNotes}
-          onDecrypt={handleDecrypt}
-          onEdit={handleEdit}
-          onDelete={handleDelete}
-          isLoading={isLoading}
-        />
-        <Fab
-          color="primary"
-          aria-label="add"
-          onClick={() => setOpenDialog(true)}
-          style={{ position: 'fixed', bottom: '2rem', right: '2rem' }}
-        >
-          <AddIcon />
-        </Fab>
-        <NoteDialog
-          open={openDialog}
-          onClose={() => setOpenDialog(false)}
-          onSave={handleSave}
-          note={editNote}
-        />
-        <DecryptDialog
-          open={openDecryptDialog}
-          onClose={handleDecryptDialogClose}
-          onDecrypt={handleDecryptDialogSubmit}
-        />
-        <Backdrop
-          sx={{ color: '#fff', zIndex: (theme) => theme.zIndex.drawer + 1 }}
-          open={isLoading}
-        >
-          <CircularProgress color="inherit" />
-        </Backdrop>
-      </Container>
-    </ThemeProvider>
+    <ErrorBoundary>
+      <ThemeProvider theme={theme}>
+        <CssBaseline />
+        <AppBar position="static">
+          <Toolbar>
+            <Typography variant="h6" style={{ flexGrow: 1 }}>
+              Noties
+            </Typography>
+            <IconButton color="inherit" onClick={() => setDarkMode(!darkMode)}>
+              {darkMode ? <Brightness7Icon /> : <Brightness4Icon />}
+            </IconButton>
+          </Toolbar>
+        </AppBar>
+        <Container>
+          <TextField
+            fullWidth
+            variant="outlined"
+            margin="normal"
+            placeholder="Buscar notas por título o tag..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <SearchIcon />
+                </InputAdornment>
+              ),
+            }}
+          />
+          <NoteList
+            notes={filteredNotes}
+            onDecrypt={handleDecrypt}
+            onEdit={handleEdit}
+            onDelete={handleDelete}
+            isLoading={isLoading}
+          />
+          <Fab
+            color="primary"
+            aria-label="add"
+            onClick={() => setOpenDialog(true)}
+            style={{ position: 'fixed', bottom: '2rem', right: '2rem' }}
+          >
+            <AddIcon />
+          </Fab>
+          <NoteDialog
+            open={openDialog}
+            onClose={() => setOpenDialog(false)}
+            onSave={handleSave}
+            note={editNote}
+          />
+          <DecryptDialog
+            open={openDecryptDialog}
+            onClose={handleDecryptDialogClose}
+            onDecrypt={handleDecryptDialogSubmit}
+          />
+          <Backdrop
+            sx={{ color: '#fff', zIndex: (theme) => theme.zIndex.drawer + 1 }}
+            open={isLoading}
+          >
+            <CircularProgress color="inherit" />
+          </Backdrop>
+        </Container>
+      </ThemeProvider>
+    </ErrorBoundary>
   );
 }
 

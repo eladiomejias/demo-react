@@ -15,6 +15,9 @@ import Brightness7Icon from '@mui/icons-material/Brightness7';
 import { createTheme, ThemeProvider } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
 import { CircularProgress, Backdrop } from '@mui/material';
+import TextField from '@mui/material/TextField';
+import InputAdornment from '@mui/material/InputAdornment';
+import SearchIcon from '@mui/icons-material/Search';
 
 function encryptText(text, secretKey) {
   return CryptoJS.AES.encrypt(text, secretKey).toString();
@@ -34,6 +37,7 @@ function App() {
   const [selectedNote, setSelectedNote] = useState(null);
   const [decryptAction, setDecryptAction] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
 
   const theme = createTheme({
     palette: {
@@ -48,9 +52,13 @@ function App() {
     const loadNotes = async () => {
       setIsLoading(true);
       const savedNotes = JSON.parse(localStorage.getItem('notes')) || [];
+      const notesWithHiddenContent = savedNotes.map((note) => ({
+        ...note,
+        decryptedContent: '',
+      }));
       // Simulate a network delay
       await new Promise((resolve) => setTimeout(resolve, 500));
-      setNotes(savedNotes);
+      setNotes(notesWithHiddenContent);
       setIsLoading(false);
     };
 
@@ -61,7 +69,7 @@ function App() {
     localStorage.setItem('notes', JSON.stringify(notes));
   }, [notes]);
 
-  const handleSave = async (title, content, secret) => {
+  const handleSave = async (title, content, secret, tags, importance) => {
     setIsLoading(true);
     const now = new Date();
     const encryptedContent = encryptText(content, secret);
@@ -71,6 +79,8 @@ function App() {
       title,
       content: encryptedContent,
       decryptedContent: '',
+      tags: tags,
+      importance: importance,
       createdAt: editNote ? editNote.createdAt : now,
       updatedAt: now,
     };
@@ -140,6 +150,14 @@ function App() {
     handleDecryptDialogClose();
   };
 
+  const filteredNotes = notes.filter((note) => {
+    const titleMatch = note.title.toLowerCase().includes(searchQuery.toLowerCase());
+    const tagMatch = note.tags
+      ? note.tags.some((tag) => tag.toLowerCase().includes(searchQuery.toLowerCase()))
+      : false;
+    return titleMatch || tagMatch;
+  });
+
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
@@ -154,8 +172,23 @@ function App() {
         </Toolbar>
       </AppBar>
       <Container>
+        <TextField
+          fullWidth
+          variant="outlined"
+          margin="normal"
+          placeholder="Buscar notas por título o tag..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          InputProps={{
+            startAdornment: (
+              <InputAdornment position="start">
+                <SearchIcon />
+              </InputAdornment>
+            ),
+          }}
+        />
         <NoteList
-          notes={notes}
+          notes={filteredNotes}
           onDecrypt={handleDecrypt}
           onEdit={handleEdit}
           onDelete={handleDelete}

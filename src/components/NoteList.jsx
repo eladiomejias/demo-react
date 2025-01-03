@@ -41,8 +41,8 @@ const PulseIndicator = styled('div')(({ theme, isImportant }) => ({
   position: 'absolute',
   top: '10px',
   right: '10px',
-  width: '20px',
-  height: '20px',
+  width: '10px',
+  height: '10px',
   borderRadius: '50%',
   backgroundColor: 'red',
   animation: isImportant ? `${pulseAnimation} 2s infinite` : 'none',
@@ -69,6 +69,9 @@ function NoteList({ notes, onDecrypt, onEdit, onDelete, isLoading }) {
   };
 
   const formatDate = (date) => {
+    if (!(date instanceof Date) || isNaN(date)) {
+      return 'Fecha inválida';
+    }
     return new Intl.DateTimeFormat('es-ES', {
       dateStyle: 'medium',
       timeStyle: 'short',
@@ -106,10 +109,10 @@ function NoteList({ notes, onDecrypt, onEdit, onDelete, isLoading }) {
                     ))}
                 </Box>
                 <Typography variant="caption" display="block" sx={{ mt: 1 }}>
-                  Creado: {formatDate(note.createdAt)}
+                  Creado: {formatDate(new Date(note.createdAt))}
                 </Typography>
                 <Typography variant="caption" display="block">
-                  Modificado: {formatDate(note.updatedAt)}
+                  Modificado: {formatDate(new Date(note.updatedAt))}
                 </Typography>
               </CardContent>
               <CardActions sx={{ pt: 0 }}>
